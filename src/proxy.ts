@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const url = request.nextUrl.clone()
   const host = request.headers.get('host') || ''
   const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN || 'localhost:3000'
@@ -10,8 +10,6 @@ export async function middleware(request: NextRequest) {
   let tenantSlug: string | null = null
   if (host !== rootDomain && host !== `www.${rootDomain}`) {
     const parts = host.split('.')
-    // [tenant].agenciafg.com.br → parts[0] = tenant
-    // crm.agenciafg.com.br → this is the platform root, no tenant
     if (parts[0] !== 'crm' && parts[0] !== 'www') {
       tenantSlug = parts[0]
     }
@@ -40,7 +38,6 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  // If tenant subdomain, enforce auth
   if (tenantSlug) {
     const isAuthRoute = url.pathname.startsWith('/login') || url.pathname.startsWith('/convite')
     const isApiRoute = url.pathname.startsWith('/api/')
@@ -50,11 +47,9 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(url)
     }
 
-    // Inject tenant slug for server components via header
     supabaseResponse.headers.set('x-tenant-slug', tenantSlug)
   }
 
-  // Platform root redirect to login if not authed
   if (!tenantSlug && url.pathname === '/' && !user) {
     url.pathname = '/login'
     return NextResponse.redirect(url)
