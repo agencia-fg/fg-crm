@@ -6,7 +6,6 @@ export async function proxy(request: NextRequest) {
   const host = request.headers.get('host') || ''
   const rootDomain = process.env.NEXT_PUBLIC_ROOT_DOMAIN || 'localhost:3000'
 
-  // Resolve tenant slug from subdomain
   let tenantSlug: string | null = null
   if (host !== rootDomain && host !== `www.${rootDomain}`) {
     const parts = host.split('.')
@@ -15,16 +14,13 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  // Supabase session refresh
   let supabaseResponse = NextResponse.next({ request })
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
+        getAll() { return request.cookies.getAll() },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
           supabaseResponse = NextResponse.next({ request })
