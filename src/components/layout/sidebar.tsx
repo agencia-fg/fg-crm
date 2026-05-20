@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard,
@@ -45,14 +46,32 @@ export function Sidebar({ tenant, user }: SidebarProps) {
     <aside className="w-60 min-h-screen bg-gray-900 flex flex-col">
       {/* Logo */}
       <div className="p-4 border-b border-gray-800">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center flex-shrink-0">
-            <span className="text-white text-xs font-bold">CRM</span>
-          </div>
-          <div className="min-w-0">
-            <p className="text-white text-sm font-semibold truncate">{tenant.name}</p>
-            <p className="text-gray-400 text-xs truncate">{tenant.plan}</p>
-          </div>
+        <div className="flex items-center gap-3">
+          {tenant.logo_url ? (
+            <div className="h-9 flex items-center">
+              <Image
+                src={tenant.logo_url}
+                alt={tenant.name}
+                width={120}
+                height={36}
+                className="object-contain max-h-9 w-auto brightness-0 invert"
+                unoptimized
+              />
+            </div>
+          ) : (
+            <div className="w-8 h-8 bg-indigo-500 rounded-lg flex items-center justify-center flex-shrink-0">
+              <span className="text-white text-xs font-bold">CRM</span>
+            </div>
+          )}
+          {!tenant.logo_url && (
+            <div className="min-w-0">
+              <p className="text-white text-sm font-semibold truncate">{tenant.name}</p>
+              <p className="text-gray-400 text-xs truncate">{tenant.plan}</p>
+            </div>
+          )}
+          {tenant.logo_url && (
+            <p className="text-gray-500 text-xs truncate">{tenant.plan}</p>
+          )}
         </div>
       </div>
 
