@@ -14,7 +14,16 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  let supabaseResponse = NextResponse.next({ request })
+  // Injeta tenant no REQUEST para Server Components lerem via headers()
+  const requestHeaders = new Headers(request.headers)
+  if (tenantSlug) {
+    requestHeaders.set('x-tenant-slug', tenantSlug)
+  }
+
+  let supabaseResponse = NextResponse.next({
+    request: { headers: requestHeaders },
+  })
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -23,7 +32,9 @@ export async function proxy(request: NextRequest) {
         getAll() { return request.cookies.getAll() },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
-          supabaseResponse = NextResponse.next({ request })
+          supabaseResponse = NextResponse.next({
+            request: { headers: requestHeaders },
+          })
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)
           )
@@ -42,8 +53,6 @@ export async function proxy(request: NextRequest) {
       url.pathname = '/login'
       return NextResponse.redirect(url)
     }
-
-    supabaseResponse.headers.set('x-tenant-slug', tenantSlug)
   }
 
   if (!tenantSlug && url.pathname === '/' && !user) {
