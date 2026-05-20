@@ -31,10 +31,18 @@ export async function proxy(request: NextRequest) {
       cookies: {
         getAll() { return request.cookies.getAll() },
         setAll(cookiesToSet) {
+          // Atualiza cookies no objeto request
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+          // Propaga os cookies renovados para requestHeaders, para que os
+          // Server Components vejam o token atualizado via cookies() do next/headers
+          requestHeaders.set(
+            'cookie',
+            request.cookies.getAll().map(({ name, value }) => `${name}=${value}`).join('; ')
+          )
           supabaseResponse = NextResponse.next({
             request: { headers: requestHeaders },
           })
+          // Envia os cookies renovados para o browser também
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)
           )
