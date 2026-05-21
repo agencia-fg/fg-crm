@@ -137,6 +137,8 @@ export interface Deal {
   value: number | null
   product_category: ProductCategory | null
   expected_close_date: string | null
+  tax_pct: number | null
+  discount_pct: number | null
   notes: string | null
   custom_fields: Record<string, string> | null
   created_at: string

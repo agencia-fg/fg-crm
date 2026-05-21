@@ -84,6 +84,8 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
             tenantId={tenant!.id}
             initialItems={dealProducts}
             products={products}
+            initialTaxPct={Number(deal.tax_pct ?? 0)}
+            initialDiscountPct={Number(deal.discount_pct ?? 0)}
           />
 
           <ActivityFeed
