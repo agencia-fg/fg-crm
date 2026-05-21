@@ -28,19 +28,61 @@ export interface TenantUser {
   created_at: string
 }
 
+export type BillingType = 'unico' | 'mensal' | 'recorrente'
+export type ProductStatus = 'ativo' | 'inativo'
+
 export interface Company {
   id: string
   tenant_id: string
   name: string
+  fantasy_name: string | null
   cnpj: string | null
-  segment: string | null
+  ie: string | null
+  im: string | null
+  zip_code: string | null
+  street: string | null
+  number: string | null
+  complement: string | null
+  neighborhood: string | null
   city: string | null
   state: string | null
+  country: string | null
   phone: string | null
+  whatsapp: string | null
   email: string | null
+  email_financial: string | null
   website: string | null
+  segment: string | null
+  status: string | null
   notes: string | null
   created_at: string
+}
+
+export interface Product {
+  id: string
+  tenant_id: string
+  name: string
+  category: string | null
+  sku: string | null
+  description: string | null
+  unit_price: number
+  billing_type: BillingType
+  status: ProductStatus
+  created_at: string
+}
+
+export interface DealProduct {
+  id: string
+  tenant_id: string
+  deal_id: string
+  product_id: string | null
+  name: string
+  unit_price: number
+  quantity: number
+  discount_pct: number
+  total: number
+  created_at: string
+  product?: Product
 }
 
 export interface Contact {

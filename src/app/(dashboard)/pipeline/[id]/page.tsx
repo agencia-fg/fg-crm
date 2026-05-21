@@ -3,15 +3,11 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getTenantBySlug, getCurrentTenantUser } from '@/lib/tenant'
 import { ActivityFeed } from '@/components/activities/activity-feed'
-import { ArrowLeft, Calendar, DollarSign, Building2, User, Tag } from 'lucide-react'
+import { DealProducts } from '@/components/pipeline/deal-products'
+import { ArrowLeft, Calendar, DollarSign, Building2, User } from 'lucide-react'
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-
-const categoryLabels: Record<string, string> = {
-  tubos: 'Tubos', eletrodutos: 'Eletrodutos',
-  conexoes: 'Conexões Galvanizadas', valvulas: 'Válvulas', outro: 'Outro',
-}
 
 export default async function DealDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -23,7 +19,7 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
     getCurrentTenantUser(),
   ])
 
-  const [dealRes, activitiesRes] = await Promise.all([
+  const [dealRes, activitiesRes, dealProductsRes, productsRes] = await Promise.all([
     supabase
       .from('deals')
       .select('*, stage:stage_id(*), company:company_id(*), contact:contact_id(*), assignee:assigned_to(*)')
@@ -35,12 +31,28 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
       .select('*, author:created_by(*)')
       .eq('deal_id', id)
       .order('created_at', { ascending: false }),
+    supabase
+      .from('deal_products')
+      .select('*')
+      .eq('deal_id', id)
+      .order('created_at'),
+    supabase
+      .from('products')
+      .select('*')
+      .eq('tenant_id', tenant!.id)
+      .order('name'),
   ])
 
   if (!dealRes.data) notFound()
 
   const deal = dealRes.data as any
   const activities = activitiesRes.data ?? []
+  const dealProducts = (dealProductsRes.data ?? []) as any[]
+  const products = (productsRes.data ?? []) as any[]
+
+  // Valor total: usa soma dos produtos se existirem, senão o valor manual
+  const productsTotal = dealProducts.reduce((s: number, i: any) => s + Number(i.total ?? 0), 0)
+  const displayValue = dealProducts.length > 0 ? productsTotal : deal.value
 
   return (
     <div className="p-8 max-w-5xl">
@@ -50,6 +62,7 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
       </Link>
 
       <div className="grid grid-cols-3 gap-6">
+        {/* Coluna principal */}
         <div className="col-span-2 space-y-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">{deal.title}</h1>
@@ -57,14 +70,21 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
               <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium text-white" style={{ backgroundColor: deal.stage?.color ?? '#6366f1' }}>
                 {deal.stage?.name}
               </span>
-              {deal.product_category && (
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
-                  <Tag className="w-3 h-3" />
-                  {categoryLabels[deal.product_category]}
+              {displayValue > 0 && (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-700">
+                  <DollarSign className="w-3 h-3" />
+                  {Number(displayValue).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                 </span>
               )}
             </div>
           </div>
+
+          <DealProducts
+            dealId={deal.id}
+            tenantId={tenant!.id}
+            initialItems={dealProducts}
+            products={products}
+          />
 
           <ActivityFeed
             activities={activities}
@@ -74,25 +94,14 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
           />
         </div>
 
+        {/* Sidebar de detalhes */}
         <div className="space-y-4">
           <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
             <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Detalhes</h3>
 
-            {deal.value && (
-              <div className="flex items-center gap-2 text-sm">
-                <DollarSign className="w-4 h-4 text-gray-400" />
-                <div>
-                  <p className="text-xs text-gray-400">Valor</p>
-                  <p className="font-semibold text-gray-900">
-                    {Number(deal.value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                  </p>
-                </div>
-              </div>
-            )}
-
             {deal.expected_close_date && (
               <div className="flex items-center gap-2 text-sm">
-                <Calendar className="w-4 h-4 text-gray-400" />
+                <Calendar className="w-4 h-4 text-gray-400 shrink-0" />
                 <div>
                   <p className="text-xs text-gray-400">Previsão de Fechamento</p>
                   <p className="font-medium text-gray-900">
@@ -104,29 +113,33 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
 
             {deal.company && (
               <div className="flex items-center gap-2 text-sm">
-                <Building2 className="w-4 h-4 text-gray-400" />
+                <Building2 className="w-4 h-4 text-gray-400 shrink-0" />
                 <div>
                   <p className="text-xs text-gray-400">Empresa</p>
                   <p className="font-medium text-gray-900">{deal.company.name}</p>
-                  {deal.company.city && <p className="text-xs text-gray-500">{deal.company.city}, {deal.company.state}</p>}
+                  {deal.company.city && (
+                    <p className="text-xs text-gray-500">{deal.company.city}, {deal.company.state}</p>
+                  )}
                 </div>
               </div>
             )}
 
             {deal.contact && (
               <div className="flex items-center gap-2 text-sm">
-                <User className="w-4 h-4 text-gray-400" />
+                <User className="w-4 h-4 text-gray-400 shrink-0" />
                 <div>
                   <p className="text-xs text-gray-400">Contato</p>
                   <p className="font-medium text-gray-900">{deal.contact.name}</p>
-                  {deal.contact.position && <p className="text-xs text-gray-500">{deal.contact.position}</p>}
+                  {deal.contact.position && (
+                    <p className="text-xs text-gray-500">{deal.contact.position}</p>
+                  )}
                 </div>
               </div>
             )}
 
             {deal.assignee && (
               <div className="flex items-center gap-2 text-sm">
-                <div className="w-4 h-4 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <div className="w-4 h-4 bg-indigo-100 rounded-full flex items-center justify-center shrink-0">
                   <span className="text-indigo-600 text-[9px] font-bold">{deal.assignee.name.charAt(0)}</span>
                 </div>
                 <div>

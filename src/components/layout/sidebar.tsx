@@ -12,6 +12,7 @@ import {
   Settings,
   LogOut,
   ChevronRight,
+  Package,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
@@ -24,6 +25,7 @@ const navItems = [
   { href: '/pipeline', label: 'Pipeline', icon: Kanban },
   { href: '/contatos', label: 'Contatos', icon: UserCircle },
   { href: '/empresas', label: 'Empresas', icon: Building2 },
+  { href: '/produtos', label: 'Produtos', icon: Package },
 ]
 
 interface SidebarProps {
