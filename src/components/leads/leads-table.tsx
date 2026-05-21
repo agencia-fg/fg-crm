@@ -6,10 +6,12 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { toast } from 'sonner'
-import { ArrowRight, CheckCircle2 } from 'lucide-react'
-import { Lead, LeadStatus, LeadSource, PipelineStage, TenantUser, ProductCategory } from '@/types'
+import { ArrowRight, CheckCircle2, Pencil } from 'lucide-react'
+import { Lead, LeadStatus, LeadSource, PipelineStage, ProductCategory } from '@/types'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
@@ -48,14 +50,70 @@ interface LeadsTableProps {
   leads: (Lead & { assignee?: { id: string; name: string } | null })[]
   stages: PipelineStage[]
   tenantId: string
+  users: { id: string; name: string }[]
 }
 
-export function LeadsTable({ leads, stages, tenantId }: LeadsTableProps) {
+export function LeadsTable({ leads, stages, tenantId, users }: LeadsTableProps) {
   const [convertLead, setConvertLead] = useState<Lead | null>(null)
+  const [editLead, setEditLead] = useState<Lead | null>(null)
   const [loading, setLoading] = useState(false)
   const [localLeads, setLocalLeads] = useState(leads)
   const router = useRouter()
   const supabase = createClient()
+
+  const [editForm, setEditForm] = useState({
+    name: '', email: '', phone: '', company_name: '',
+    source: 'outro' as LeadSource, status: 'novo' as LeadStatus,
+    message: '', assigned_to: '',
+  })
+
+  function openEdit(lead: Lead) {
+    setEditForm({
+      name: lead.name,
+      email: lead.email ?? '',
+      phone: lead.phone ?? '',
+      company_name: lead.company_name ?? '',
+      source: lead.source,
+      status: lead.status,
+      message: lead.message ?? '',
+      assigned_to: lead.assigned_to ?? '',
+    })
+    setEditLead(lead)
+  }
+
+  async function handleEdit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!editLead) return
+    setLoading(true)
+
+    const { error } = await supabase
+      .from('leads')
+      .update({
+        name: editForm.name,
+        email: editForm.email || null,
+        phone: editForm.phone || null,
+        company_name: editForm.company_name || null,
+        source: editForm.source,
+        status: editForm.status,
+        message: editForm.message || null,
+        assigned_to: editForm.assigned_to || null,
+      })
+      .eq('id', editLead.id)
+
+    if (error) { toast.error('Erro ao salvar'); setLoading(false); return }
+
+    setLocalLeads(prev => prev.map(l =>
+      l.id === editLead.id
+        ? { ...l, ...editForm, email: editForm.email || null, phone: editForm.phone || null,
+            company_name: editForm.company_name || null, message: editForm.message || null,
+            assigned_to: editForm.assigned_to || null }
+        : l
+    ))
+    toast.success('Lead atualizado!')
+    setEditLead(null)
+    setLoading(false)
+    router.refresh()
+  }
 
   const [dealForm, setDealForm] = useState({
     title: '',
@@ -144,6 +202,7 @@ export function LeadsTable({ leads, stages, tenantId }: LeadsTableProps) {
               <th className="text-left px-4 py-3 font-medium text-gray-600">Responsável</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600">Data</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600">Pipeline</th>
+              <th className="w-10" />
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -192,11 +251,93 @@ export function LeadsTable({ leads, stages, tenantId }: LeadsTableProps) {
                     </Button>
                   )}
                 </td>
+                <td className="px-2 py-3">
+                  <button
+                    onClick={() => openEdit(lead)}
+                    className="p-1.5 rounded text-gray-300 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                    title="Editar lead"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+
+      {/* Dialog de edição */}
+      <Dialog open={!!editLead} onOpenChange={(o) => !o && setEditLead(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Editar Lead</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleEdit} className="space-y-4 mt-2">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5 col-span-2">
+                <Label>Nome *</Label>
+                <Input value={editForm.name} onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))} required />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Empresa</Label>
+                <Input value={editForm.company_name} onChange={e => setEditForm(p => ({ ...p, company_name: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Telefone</Label>
+                <Input value={editForm.phone} onChange={e => setEditForm(p => ({ ...p, phone: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5 col-span-2">
+                <Label>Email</Label>
+                <Input type="email" value={editForm.email} onChange={e => setEditForm(p => ({ ...p, email: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Origem</Label>
+                <Select value={editForm.source} onValueChange={v => setEditForm(p => ({ ...p, source: (v ?? 'outro') as LeadSource }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {(['site','whatsapp','indicacao','ligacao','email','outro'] as LeadSource[]).map(s => (
+                      <SelectItem key={s} value={s}>
+                        {s === 'site' ? 'Site' : s === 'whatsapp' ? 'WhatsApp' : s === 'indicacao' ? 'Indicação' : s === 'ligacao' ? 'Ligação' : s === 'email' ? 'Email' : 'Outro'}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Status</Label>
+                <Select value={editForm.status} onValueChange={v => setEditForm(p => ({ ...p, status: (v ?? 'novo') as LeadStatus }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="novo">Novo</SelectItem>
+                    <SelectItem value="contatado">Contatado</SelectItem>
+                    <SelectItem value="qualificado">Qualificado</SelectItem>
+                    <SelectItem value="desqualificado">Desqualificado</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {users.length > 0 && (
+                <div className="space-y-1.5 col-span-2">
+                  <Label>Responsável</Label>
+                  <Select value={editForm.assigned_to} onValueChange={v => setEditForm(p => ({ ...p, assigned_to: v ?? '' }))}>
+                    <SelectTrigger><SelectValue placeholder="Nenhum" /></SelectTrigger>
+                    <SelectContent>
+                      {users.map(u => <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              <div className="space-y-1.5 col-span-2">
+                <Label>Mensagem / Observação</Label>
+                <Textarea value={editForm.message} onChange={e => setEditForm(p => ({ ...p, message: e.target.value }))} rows={3} />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="outline" onClick={() => setEditLead(null)}>Cancelar</Button>
+              <Button type="submit" disabled={loading}>{loading ? 'Salvando...' : 'Salvar'}</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Dialog de conversão */}
       <Dialog open={!!convertLead} onOpenChange={(o) => !o && setConvertLead(null)}>

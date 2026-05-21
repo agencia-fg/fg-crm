@@ -4,17 +4,10 @@ import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { Deal } from '@/types'
 import { cn } from '@/lib/utils'
-import { Building2, User, Calendar, DollarSign } from 'lucide-react'
+import { Building2, User, Calendar, DollarSign, ExternalLink } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-
-const categoryColors: Record<string, string> = {
-  tubos: 'bg-blue-100 text-blue-700',
-  eletrodutos: 'bg-purple-100 text-purple-700',
-  conexoes: 'bg-orange-100 text-orange-700',
-  valvulas: 'bg-teal-100 text-teal-700',
-  outro: 'bg-gray-100 text-gray-600',
-}
+import Link from 'next/link'
 
 interface DealCardProps {
   deal: Deal
@@ -35,45 +28,53 @@ export function DealCard({ deal, isDragging }: DealCardProps) {
       ref={setNodeRef}
       style={style}
       {...attributes}
-      {...listeners}
       className={cn(
-        'bg-white rounded-lg p-3 shadow-sm border border-gray-200 cursor-grab active:cursor-grabbing select-none',
+        'bg-white rounded-lg shadow-sm border border-gray-200 select-none',
         (isDragging || isSortableDragging) && 'opacity-50 shadow-lg ring-2 ring-indigo-300'
       )}
     >
-      <p className="font-medium text-gray-900 text-sm leading-tight mb-2">{deal.title}</p>
+      {/* Área de drag — ocupa a maior parte do card */}
+      <div {...listeners} className="p-3 pb-2 cursor-grab active:cursor-grabbing">
+        <p className="font-medium text-gray-900 text-sm leading-tight pr-4">{deal.title}</p>
 
-      {deal.product_category && (
-        <span className={`inline-flex text-xs px-1.5 py-0.5 rounded-full mb-2 ${categoryColors[deal.product_category] ?? categoryColors.outro}`}>
-          {deal.product_category}
-        </span>
-      )}
+        <div className="space-y-1 mt-2">
+          {deal.company?.name && (
+            <div className="flex items-center gap-1.5 text-xs text-gray-500">
+              <Building2 className="w-3 h-3 shrink-0" />
+              <span className="truncate">{deal.company.name}</span>
+            </div>
+          )}
+          {deal.value && (
+            <div className="flex items-center gap-1.5 text-xs text-gray-500">
+              <DollarSign className="w-3 h-3 shrink-0" />
+              <span>{Number(deal.value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+            </div>
+          )}
+          {deal.expected_close_date && (
+            <div className="flex items-center gap-1.5 text-xs text-gray-500">
+              <Calendar className="w-3 h-3 shrink-0" />
+              <span>{format(new Date(deal.expected_close_date), "dd/MM/yyyy", { locale: ptBR })}</span>
+            </div>
+          )}
+          {deal.assignee && (
+            <div className="flex items-center gap-1.5 text-xs text-gray-500">
+              <User className="w-3 h-3 shrink-0" />
+              <span className="truncate">{deal.assignee.name}</span>
+            </div>
+          )}
+        </div>
+      </div>
 
-      <div className="space-y-1">
-        {(deal.company?.name || deal.company_id) && (
-          <div className="flex items-center gap-1.5 text-xs text-gray-500">
-            <Building2 className="w-3 h-3" />
-            <span className="truncate">{deal.company?.name ?? '—'}</span>
-          </div>
-        )}
-        {deal.value && (
-          <div className="flex items-center gap-1.5 text-xs text-gray-500">
-            <DollarSign className="w-3 h-3" />
-            <span>R$ {deal.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-          </div>
-        )}
-        {deal.expected_close_date && (
-          <div className="flex items-center gap-1.5 text-xs text-gray-500">
-            <Calendar className="w-3 h-3" />
-            <span>{format(new Date(deal.expected_close_date), "dd/MM/yyyy", { locale: ptBR })}</span>
-          </div>
-        )}
-        {deal.assignee && (
-          <div className="flex items-center gap-1.5 text-xs text-gray-500">
-            <User className="w-3 h-3" />
-            <span className="truncate">{deal.assignee.name}</span>
-          </div>
-        )}
+      {/* Footer com botão de abrir — fora da área de drag */}
+      <div className="px-3 pb-2.5 flex justify-end">
+        <Link
+          href={`/pipeline/${deal.id}`}
+          onPointerDown={e => e.stopPropagation()}
+          className="inline-flex items-center gap-1 text-xs text-indigo-500 hover:text-indigo-700 transition-colors"
+        >
+          <ExternalLink className="w-3 h-3" />
+          Abrir
+        </Link>
       </div>
     </div>
   )

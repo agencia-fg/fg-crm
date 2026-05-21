@@ -44,7 +44,7 @@ export default async function LeadsPage() {
         <LeadForm tenantId={tenant!.id} users={users} />
       </div>
 
-      <LeadsTable leads={leads as any} stages={stages} tenantId={tenant!.id} />
+      <LeadsTable leads={leads as any} stages={stages} tenantId={tenant!.id} users={users} />
     </div>
   )
 }
