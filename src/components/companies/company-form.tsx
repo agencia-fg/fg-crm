@@ -15,13 +15,14 @@ const BR_STATES = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','
 
 interface CompanyFormProps {
   tenantId: string
+  users: { id: string; name: string }[]
 }
 
 const emptyForm = {
   name: '', fantasy_name: '', cnpj: '', ie: '', im: '',
   zip_code: '', street: '', number: '', complement: '', neighborhood: '', city: '', state: '', country: 'Brasil',
   phone: '', whatsapp: '', email: '', email_financial: '', website: '',
-  segment: '', status: 'ativo', notes: '',
+  segment: '', employees_count: '', estimated_revenue: '', assigned_to: '', status: 'ativo', notes: '',
 }
 
 function cleanCnpj(v: string) { return v.replace(/\D/g, '') }
@@ -39,7 +40,7 @@ function maskCep(v: string) {
   return d.replace(/^(\d{5})(\d*)$/, '$1-$2')
 }
 
-export function CompanyForm({ tenantId }: CompanyFormProps) {
+export function CompanyForm({ tenantId, users }: CompanyFormProps) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [cnpjLoading, setCnpjLoading] = useState(false)
@@ -126,6 +127,9 @@ export function CompanyForm({ tenantId }: CompanyFormProps) {
       email_financial: form.email_financial || null,
       website: form.website || null,
       segment: form.segment || null,
+      employees_count: form.employees_count || null,
+      estimated_revenue: form.estimated_revenue || null,
+      assigned_to: form.assigned_to || null,
       status: form.status,
       notes: form.notes || null,
     })
@@ -275,19 +279,62 @@ export function CompanyForm({ tenantId }: CompanyFormProps) {
                   <Input value={form.segment} onChange={e => set('segment', e.target.value)} placeholder="Construtora, Indústria..." />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Status</Label>
+                  <Label>Nº de Funcionários</Label>
+                  <select
+                    className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-xs focus:outline-none"
+                    value={form.employees_count}
+                    onChange={e => set('employees_count', e.target.value)}
+                  >
+                    <option value="">Não informado</option>
+                    <option value="1-10">1 a 10</option>
+                    <option value="11-50">11 a 50</option>
+                    <option value="51-200">51 a 200</option>
+                    <option value="201-500">201 a 500</option>
+                    <option value="500+">Acima de 500</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Faturamento Estimado</Label>
+                  <select
+                    className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-xs focus:outline-none"
+                    value={form.estimated_revenue}
+                    onChange={e => set('estimated_revenue', e.target.value)}
+                  >
+                    <option value="">Não informado</option>
+                    <option value="ate-500k">Até R$ 500 mil</option>
+                    <option value="500k-2m">R$ 500 mil a R$ 2 mi</option>
+                    <option value="2m-10m">R$ 2 mi a R$ 10 mi</option>
+                    <option value="10m-50m">R$ 10 mi a R$ 50 mi</option>
+                    <option value="50m+">Acima de R$ 50 mi</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Status da Conta</Label>
                   <select
                     className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-xs focus:outline-none"
                     value={form.status}
                     onChange={e => set('status', e.target.value)}
                   >
-                    <option value="ativo">Ativo</option>
-                    <option value="inativo">Inativo</option>
                     <option value="prospect">Prospect</option>
+                    <option value="ativo">Ativo</option>
                     <option value="cliente">Cliente</option>
+                    <option value="inativo">Inativo</option>
                     <option value="ex-cliente">Ex-cliente</option>
                   </select>
                 </div>
+                {users.length > 0 && (
+                  <div className="space-y-1.5 col-span-2">
+                    <Label>Responsável Comercial</Label>
+                    <select
+                      className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-xs focus:outline-none"
+                      value={form.assigned_to}
+                      onChange={e => set('assigned_to', e.target.value)}
+                    >
+                      <option value="">Nenhum</option>
+                      {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+                    </select>
+                  </div>
+                )}
                 <div className="space-y-1.5 col-span-2">
                   <Label>Observações</Label>
                   <Textarea value={form.notes} onChange={e => set('notes', e.target.value)} rows={2} />

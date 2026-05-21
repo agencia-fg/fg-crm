@@ -10,11 +10,10 @@ export default async function EmpresasPage() {
   const supabase = await createClient()
   const tenant = await getTenantBySlug(tenantSlug)
 
-  const { data: companies } = await supabase
-    .from('companies')
-    .select('*')
-    .eq('tenant_id', tenant!.id)
-    .order('name')
+  const [{ data: companies }, { data: users }] = await Promise.all([
+    supabase.from('companies').select('*').eq('tenant_id', tenant!.id).order('name'),
+    supabase.from('tenant_users').select('id, name').eq('tenant_id', tenant!.id),
+  ])
 
   return (
     <div className="p-8">
@@ -23,7 +22,7 @@ export default async function EmpresasPage() {
           <h1 className="text-2xl font-bold text-gray-900">Empresas</h1>
           <p className="text-gray-500 text-sm mt-1">{companies?.length ?? 0} empresa{(companies?.length ?? 0) !== 1 ? 's' : ''} cadastrada{(companies?.length ?? 0) !== 1 ? 's' : ''}</p>
         </div>
-        <CompanyForm tenantId={tenant!.id} />
+        <CompanyForm tenantId={tenant!.id} users={users ?? []} />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

@@ -53,6 +53,9 @@ export interface Company {
   email_financial: string | null
   website: string | null
   segment: string | null
+  employees_count: string | null
+  estimated_revenue: string | null
+  assigned_to: string | null
   status: string | null
   notes: string | null
   created_at: string
