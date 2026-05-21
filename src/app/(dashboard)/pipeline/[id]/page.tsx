@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase/server'
 import { getTenantBySlug, getCurrentTenantUser } from '@/lib/tenant'
 import { ActivityFeed } from '@/components/activities/activity-feed'
 import { DealProducts } from '@/components/pipeline/deal-products'
+import { ProposalPdfButton } from '@/components/pipeline/proposal-pdf'
+import { DealFiles } from '@/components/pipeline/deal-files'
 import { ArrowLeft, Calendar, DollarSign, Building2, User } from 'lucide-react'
 import Link from 'next/link'
 import { format } from 'date-fns'
@@ -19,7 +21,7 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
     getCurrentTenantUser(),
   ])
 
-  const [dealRes, activitiesRes, dealProductsRes, productsRes] = await Promise.all([
+  const [dealRes, activitiesRes, dealProductsRes, productsRes, filesRes] = await Promise.all([
     supabase
       .from('deals')
       .select('*, stage:stage_id(*), company:company_id(*), contact:contact_id(*), assignee:assigned_to(*)')
@@ -41,6 +43,11 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
       .select('*')
       .eq('tenant_id', tenant!.id)
       .order('name'),
+    supabase
+      .from('deal_files')
+      .select('*')
+      .eq('deal_id', id)
+      .order('created_at'),
   ])
 
   if (!dealRes.data) notFound()
@@ -49,6 +56,7 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
   const activities = activitiesRes.data ?? []
   const dealProducts = (dealProductsRes.data ?? []) as any[]
   const products = (productsRes.data ?? []) as any[]
+  const dealFiles = (filesRes.data ?? []) as any[]
 
   // Valor total: usa soma dos produtos se existirem, senão o valor manual
   const productsTotal = dealProducts.reduce((s: number, i: any) => s + Number(i.total ?? 0), 0)
@@ -56,10 +64,39 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
 
   return (
     <div className="p-8 max-w-5xl">
-      <Link href="/pipeline" className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 mb-6 transition-colors">
-        <ArrowLeft className="w-4 h-4" />
-        Voltar ao Pipeline
-      </Link>
+      <div className="flex items-center justify-between mb-6">
+        <Link href="/pipeline" className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition-colors">
+          <ArrowLeft className="w-4 h-4" />
+          Voltar ao Pipeline
+        </Link>
+        <ProposalPdfButton data={{
+          dealTitle: deal.title,
+          dealNotes: deal.notes,
+          companyName: deal.company?.name ?? null,
+          companyFantasy: deal.company?.fantasy_name ?? null,
+          companyCnpj: deal.company?.cnpj ?? null,
+          companyAddress: deal.company
+            ? [deal.company.street, deal.company.number, deal.company.city, deal.company.state]
+                .filter(Boolean).join(', ')
+            : null,
+          contactName: deal.contact?.name ?? null,
+          contactPhone: deal.contact?.phone ?? null,
+          contactEmail: deal.contact?.email ?? null,
+          assigneeName: deal.assignee?.name ?? null,
+          items: dealProducts.map((p: any) => ({
+            name: p.name,
+            quantity: p.quantity,
+            unit_price: Number(p.unit_price),
+            discount_pct: Number(p.discount_pct),
+            total: Number(p.total),
+          })),
+          discountPct: Number(deal.discount_pct ?? 0),
+          taxPct: Number(deal.tax_pct ?? 0),
+          tenantName: tenant!.name,
+          tenantLogoUrl: tenant!.logo_url ?? null,
+          expectedCloseDate: deal.expected_close_date,
+        }} />
+      </div>
 
       <div className="grid grid-cols-3 gap-6">
         {/* Coluna principal */}
@@ -86,6 +123,12 @@ export default async function DealDetailPage({ params }: { params: Promise<{ id:
             products={products}
             initialTaxPct={Number(deal.tax_pct ?? 0)}
             initialDiscountPct={Number(deal.discount_pct ?? 0)}
+          />
+
+          <DealFiles
+            dealId={deal.id}
+            tenantId={tenant!.id}
+            initialFiles={dealFiles}
           />
 
           <ActivityFeed
