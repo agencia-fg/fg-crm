@@ -12,10 +12,22 @@ export interface Tenant {
   name: string
   plan: Plan
   logo_url: string | null
+  rotation_enabled: boolean
+  rotation_last_user_id: string | null
   trial_ends_at: string | null
   stripe_customer_id: string | null
   stripe_subscription_id: string | null
   created_at: string
+}
+
+export interface RotationQueueEntry {
+  id: string
+  tenant_id: string
+  tenant_user_id: string   // tenant_users.id — usado como assigned_to
+  position: number
+  active: boolean
+  created_at: string
+  tenant_user?: TenantUser
 }
 
 export interface TenantUser {

@@ -90,9 +90,11 @@ interface LeadsTableProps {
   stages: PipelineStage[]
   tenantId: string
   users: { id: string; name: string }[]
+  isAdmin: boolean
+  currentUser: { id: string; name: string; role: string }
 }
 
-export function LeadsTable({ leads, stages, tenantId, users }: LeadsTableProps) {
+export function LeadsTable({ leads, stages, tenantId, users, isAdmin, currentUser }: LeadsTableProps) {
   const [convertLead, setConvertLead] = useState<Lead | null>(null)
   const [editLead, setEditLead] = useState<Lead | null>(null)
   const [loading, setLoading] = useState(false)
@@ -254,7 +256,7 @@ export function LeadsTable({ leads, stages, tenantId, users }: LeadsTableProps) 
               <th className="text-left px-4 py-3 font-medium text-gray-600">Contato</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600">Origem</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600">Status</th>
-              <th className="text-left px-4 py-3 font-medium text-gray-600">Responsável</th>
+              {isAdmin && <th className="text-left px-4 py-3 font-medium text-gray-600">Responsável</th>}
               <th className="text-left px-4 py-3 font-medium text-gray-600">Data</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600">Pipeline</th>
               <th className="w-10" />
@@ -282,9 +284,11 @@ export function LeadsTable({ leads, stages, tenantId, users }: LeadsTableProps) 
                     {statusLabels[lead.status]}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-gray-600">
-                  {(lead as any).assignee?.name ?? '—'}
-                </td>
+                {isAdmin && (
+                  <td className="px-4 py-3 text-gray-600">
+                    {(lead as any).assignee?.name ?? '—'}
+                  </td>
+                )}
                 <td className="px-4 py-3 text-gray-500 text-xs">
                   {format(new Date(lead.created_at), "dd MMM yyyy", { locale: ptBR })}
                 </td>
@@ -370,7 +374,7 @@ export function LeadsTable({ leads, stages, tenantId, users }: LeadsTableProps) 
                   </SelectContent>
                 </Select>
               </div>
-              {users.length > 0 && (
+              {isAdmin && users.length > 0 && (
                 <div className="space-y-1.5 col-span-2">
                   <Label>Responsável</Label>
                   <Select value={editForm.assigned_to} onValueChange={v => setEditForm(p => ({ ...p, assigned_to: v ?? '' }))}>
