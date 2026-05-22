@@ -15,6 +15,45 @@ import { Lead, LeadStatus, LeadSource, PipelineStage, ProductCategory } from '@/
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
+async function findOrCreateCompany(
+  supabase: ReturnType<typeof createClient>,
+  tenantId: string,
+  name: string,
+  phone: string,
+  email: string
+): Promise<string | null> {
+  const { data: existing } = await supabase
+    .from('companies').select('id')
+    .eq('tenant_id', tenantId).ilike('name', name.trim()).limit(1).maybeSingle()
+  if (existing) return existing.id
+  const { data: created } = await supabase
+    .from('companies')
+    .insert({ tenant_id: tenantId, name: name.trim(), phone: phone || null, email: email || null })
+    .select('id').single()
+  return created?.id ?? null
+}
+
+async function findOrCreateContact(
+  supabase: ReturnType<typeof createClient>,
+  tenantId: string,
+  name: string,
+  email: string,
+  phone: string,
+  companyId: string | null
+): Promise<string | null> {
+  if (email) {
+    const { data: byEmail } = await supabase
+      .from('contacts').select('id')
+      .eq('tenant_id', tenantId).eq('email', email.trim()).limit(1).maybeSingle()
+    if (byEmail) return byEmail.id
+  }
+  const { data: created } = await supabase
+    .from('contacts')
+    .insert({ tenant_id: tenantId, company_id: companyId, name: name.trim(), email: email || null, phone: phone || null })
+    .select('id').single()
+  return created?.id ?? null
+}
+
 const statusColors: Record<LeadStatus, string> = {
   novo: 'bg-blue-100 text-blue-700',
   contatado: 'bg-yellow-100 text-yellow-700',
@@ -86,6 +125,18 @@ export function LeadsTable({ leads, stages, tenantId, users }: LeadsTableProps) 
     if (!editLead) return
     setLoading(true)
 
+    // Auto-cria empresa e contato se necessário
+    let companyId = editLead.company_id ?? null
+    let contactId = editLead.contact_id ?? null
+    try {
+      if (editForm.company_name) {
+        companyId = await findOrCreateCompany(supabase, tenantId, editForm.company_name, editForm.phone, editForm.email)
+      }
+      contactId = await findOrCreateContact(supabase, tenantId, editForm.name, editForm.email, editForm.phone, companyId)
+    } catch {
+      // Não bloqueia — atualiza o lead mesmo se a criação de empresa/contato falhar
+    }
+
     const { error } = await supabase
       .from('leads')
       .update({
@@ -97,6 +148,8 @@ export function LeadsTable({ leads, stages, tenantId, users }: LeadsTableProps) 
         status: editForm.status,
         message: editForm.message || null,
         assigned_to: editForm.assigned_to || null,
+        company_id: companyId,
+        contact_id: contactId,
       })
       .eq('id', editLead.id)
 
@@ -106,7 +159,7 @@ export function LeadsTable({ leads, stages, tenantId, users }: LeadsTableProps) 
       l.id === editLead.id
         ? { ...l, ...editForm, email: editForm.email || null, phone: editForm.phone || null,
             company_name: editForm.company_name || null, message: editForm.message || null,
-            assigned_to: editForm.assigned_to || null }
+            assigned_to: editForm.assigned_to || null, company_id: companyId, contact_id: contactId }
         : l
     ))
     toast.success('Lead atualizado!')
@@ -137,7 +190,7 @@ export function LeadsTable({ leads, stages, tenantId, users }: LeadsTableProps) 
     if (!convertLead) return
     setLoading(true)
 
-    // Cria o deal
+    // Cria o deal vinculando empresa e contato do lead
     const { data: deal, error: dealError } = await supabase
       .from('deals')
       .insert({
@@ -148,6 +201,8 @@ export function LeadsTable({ leads, stages, tenantId, users }: LeadsTableProps) 
         product_category: dealForm.product_category || null,
         assigned_to: convertLead.assigned_to,
         notes: convertLead.message,
+        company_id: convertLead.company_id ?? null,
+        contact_id: convertLead.contact_id ?? null,
       })
       .select()
       .single()

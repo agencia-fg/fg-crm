@@ -110,6 +110,8 @@ export interface Lead {
   email: string | null
   phone: string | null
   company_name: string | null
+  company_id: string | null
+  contact_id: string | null
   message: string | null
   assigned_to: string | null
   converted_to_deal_id: string | null

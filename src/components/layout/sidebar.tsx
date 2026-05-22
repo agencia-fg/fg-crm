@@ -13,6 +13,7 @@ import {
   LogOut,
   ChevronRight,
   Package,
+  UserCog,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { createClient } from '@/lib/supabase/client'
@@ -26,6 +27,10 @@ const navItems = [
   { href: '/contatos', label: 'Contatos', icon: UserCircle },
   { href: '/empresas', label: 'Empresas', icon: Building2 },
   { href: '/produtos', label: 'Produtos', icon: Package },
+]
+
+const adminNavItems = [
+  { href: '/usuarios', label: 'Usuários', icon: UserCog },
 ]
 
 interface SidebarProps {
@@ -98,6 +103,33 @@ export function Sidebar({ tenant, user }: SidebarProps) {
             </Link>
           )
         })}
+
+        {user.role === 'admin' && (
+          <>
+            <div className="pt-3 pb-1">
+              <p className="px-3 text-[10px] font-semibold text-gray-600 uppercase tracking-widest">Administração</p>
+            </div>
+            {adminNavItems.map(({ href, label, icon: Icon }) => {
+              const active = pathname === href || pathname.startsWith(href + '/')
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  className={cn(
+                    'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors',
+                    active
+                      ? 'bg-indigo-600 text-white'
+                      : 'text-gray-400 hover:text-white hover:bg-gray-800'
+                  )}
+                >
+                  <Icon className="w-4 h-4 flex-shrink-0" />
+                  <span>{label}</span>
+                  {active && <ChevronRight className="w-3 h-3 ml-auto" />}
+                </Link>
+              )
+            })}
+          </>
+        )}
       </nav>
 
       {/* Footer */}
