@@ -4,7 +4,7 @@ import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { Deal } from '@/types'
 import { cn } from '@/lib/utils'
-import { Building2, User, Calendar, DollarSign, ExternalLink } from 'lucide-react'
+import { Building2, User, Calendar, DollarSign, ExternalLink, Trophy, XCircle } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import Link from 'next/link'
@@ -35,7 +35,19 @@ export function DealCard({ deal, isDragging }: DealCardProps) {
     >
       {/* Área de drag — ocupa a maior parte do card */}
       <div {...listeners} className="p-3 pb-2 cursor-grab active:cursor-grabbing">
-        <p className="font-medium text-gray-900 text-sm leading-tight pr-4">{deal.title}</p>
+        <div className="flex items-start justify-between gap-2">
+          <p className="font-medium text-gray-900 text-sm leading-tight">{deal.title}</p>
+          {deal.status === 'ganho' && (
+            <span className="shrink-0 inline-flex items-center gap-0.5 text-[10px] font-semibold text-green-700 bg-green-50 px-1.5 py-0.5 rounded-full">
+              <Trophy className="w-2.5 h-2.5" />Ganho
+            </span>
+          )}
+          {deal.status === 'perdido' && (
+            <span className="shrink-0 inline-flex items-center gap-0.5 text-[10px] font-semibold text-red-600 bg-red-50 px-1.5 py-0.5 rounded-full">
+              <XCircle className="w-2.5 h-2.5" />Perdido
+            </span>
+          )}
+        </div>
 
         <div className="space-y-1 mt-2">
           {deal.company?.name && (

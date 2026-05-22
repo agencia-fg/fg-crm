@@ -4,6 +4,7 @@ export type LeadSource = 'site' | 'whatsapp' | 'indicacao' | 'ligacao' | 'email'
 export type ActivityType = 'nota' | 'ligacao' | 'reuniao' | 'email' | 'whatsapp'
 export type Plan = 'trial' | 'starter' | 'pro'
 export type ProductCategory = 'tubos' | 'eletrodutos' | 'conexoes' | 'valvulas' | 'outro'
+export type DealStatus = 'aberto' | 'ganho' | 'perdido'
 
 export interface Tenant {
   id: string
@@ -142,6 +143,8 @@ export interface Deal {
   tax_pct: number | null
   discount_pct: number | null
   notes: string | null
+  status: DealStatus
+  lost_reason: string | null
   custom_fields: Record<string, string> | null
   created_at: string
   contact?: Contact
@@ -149,6 +152,14 @@ export interface Deal {
   stage?: PipelineStage
   assignee?: TenantUser
   activities?: Activity[]
+}
+
+export interface LossReason {
+  id: string
+  tenant_id: string
+  reason: string
+  position: number
+  created_at: string
 }
 
 export interface Activity {
